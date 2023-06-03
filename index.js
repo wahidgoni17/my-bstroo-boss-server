@@ -180,15 +180,32 @@ async function run() {
       });
     });
 
-    // payment history api 
+    // payment history api
 
-    app.post('/payments', verifyJWT, async(req, res)=>{
-      const payment = req.body
-      const insertResult = await paymentCollection.insertOne(payment)
-      const query = {_id: {$in: payment.cartItems.map(id=> new ObjectId(id))}}
-      const deleteResult = await cartCollection.deleteMany(query)
-      res.send({result: insertResult, deleteResult})
-    })
+    app.post("/payments", verifyJWT, async (req, res) => {
+      const payment = req.body;
+      const insertResult = await paymentCollection.insertOne(payment);
+      const query = {
+        _id: { $in: payment.cartItems.map((id) => new ObjectId(id)) },
+      };
+      const deleteResult = await cartCollection.deleteMany(query);
+      res.send({ result: insertResult, deleteResult });
+    });
+
+    // admin stats
+    app.get("/admin-stats", verifyJWT, verifyAdmin, async (req, res) => {
+      const users = await usersCollection.estimatedDocumentCount();
+      const products = await menuCollection.estimatedDocumentCount();
+      const orders = await paymentCollection.estimatedDocumentCount();
+      const payments = await paymentCollection.find().toArray();
+      const revenue = payments.reduce((sum, payment) => sum + payment.price, 0);
+      res.send({
+        users,
+        products,
+        orders,
+        revenue
+      });
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
